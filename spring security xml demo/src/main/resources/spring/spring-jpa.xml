@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx" xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context.xsd
+	http://www.springframework.org/schema/aop
+	http://www.springframework.org/schema/aop/spring-aop.xsd
+	http://www.springframework.org/schema/tx
+	http://www.springframework.org/schema/tx/spring-tx.xsd http://www.springframework.org/schema/data/jpa https://www.springframework.org/schema/data/jpa/spring-jpa.xsd">
+
+    <!--1.引入数据源配置文件-->
+    <!--方式1：-->
+    <!--        <context:property-placeholder location="classpath:jdbc.properties,classpath:redis.properties"/>-->
+    <context:property-placeholder location="classpath:jdbc.properties"/>
+    <!--方式2: -->
+    <!--<bean id="propertyConfigurer" class="org.springframework.beans.factory.com.wxss.config.PropertyPlaceholderConfigurer">-->
+    <!--<property name="location" value="classpath:jdbc.properties" />-->
+    <!--</bean>-->
+
+    <!--注意：没有扫描mapper接口-->
+    <context:component-scan base-package="com.wxss.service"/>
+    <!--2.配置数据源：阿里的druid连接池-->
+    <bean id="druidDataSource" class="com.alibaba.druid.pool.DruidDataSource">
+        <property name="driverClassName" value="${jdbc.driver}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>
+
+    <!--将实体类管理器工厂类交给spring管理-->
+    <bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+        <!--注入数据源-->
+        <property name="dataSource" ref="druidDataSource"/>
+        <!--扫描实体类所在包：扫描该包下的实体类，找到使用JPA注解的实体类；
+            程序启动后，分析映射关系-->
+        <property name="packagesToScan" value="com.wxss.pojo"/>
+        <!--JPA实现方：Hibernate-->
+        <property name="persistenceProvider">
+            <bean class="org.hibernate.jpa.HibernatePersistenceProvider"/>
+        </property>
+        <!--JPA的供应商适配器-->
+        <property name="jpaVendorAdapter">
+            <bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+                <!--应用是否创建表-->
+                <property name="generateDdl" value="false"/>
+                <!--使用的数据库类型-->
+                <property name="database" value="MYSQL"/>
+                <!--数据库环境-->
+                <property name="databasePlatform" value="org.hibernate.dialect.MySQLDialect"/>
+                <!--控制台是否显示sql语句-->
+                <property name="showSql" value="true"/>
+            </bean>
+        </property>
+        <!--JPA方言：hibernate的一些特性-->
+        <property name="jpaDialect">
+            <bean class="org.springframework.orm.jpa.vendor.HibernateJpaDialect"/>
+        </property>
+    </bean>
+
+    <!-- JPA事务管理器  -->
+    <bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+        <property name="entityManagerFactory" ref="entityManagerFactory"/>
+    </bean>
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+    <!--dao接口所在包：spring会对该包下的所有接口进行动态代理，增强-->
+    <jpa:repositories
+            base-package="com.wxss.respository"
+            transaction-manager-ref="transactionManager"
+            entity-manager-factory-ref="entityManagerFactory"/>
+</beans>
